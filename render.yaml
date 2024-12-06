@@ -3,5 +3,6 @@ services:
     name: flask-app
     env: python
     plan: free
+    pythonVersion: 3.10.9  # Add this line for your Python version
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
