@@ -580,7 +580,7 @@ def generate_frames(exercise_type):
             success, frame = camera.read()
             
             if not success:
-                print("Error: Failed to read frame from camera.") 
+                print("Error: Failed to read frame from camera.")  
                 continue
             
             try:
