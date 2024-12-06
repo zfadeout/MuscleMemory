@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muscle Memory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Muscle Memory's Workout Monitor</h1>
+        </header>
+
+        <div class="workout-select">
+            <select id="exercise-select">
+                <option value="bicep_curl">Bicep Curl</option>
+                <option value="lateral_raise">Lateral Raise</option>
+                <option value="shoulder_press">Shoulder Press</option>
+            </select>
+            <div class="button-group">
+                <button id="start-btn" class="btn">Start Workout</button>
+                <button id="stop-btn" class="btn btn-stop" disabled>Stop Workout</button>
+            </div>
+        </div>
+
+        <div class="video-section">
+            <img id="video-feed" src="" alt="Workout Feed">
+        </div>
+
+        <div id="summary-section" class="workout-summary hidden">
+            <h3>Workout Summary</h3>
+            <div class="summary-stats">
+                <div>
+                    Total Reps: <span id="total-reps">0</span>
+                </div>
+                <div>
+                    Form Score: <span id="form-score">0%</span>
+                </div>
+                <div>
+                    Average Rep Time: <span id="avg-rep-time">0s</span>
+                </div>
+            </div>
+            <div class="personal-feedback">
+                Ready to start your workout!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let videoFeed;
+        let exerciseType = 'bicep_curl';
+        let isWorkoutActive = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const exerciseSelect = document.getElementById('exercise-select');
+            videoFeed = document.getElementById('video-feed');
+
+            exerciseSelect.addEventListener('change', function() {
+                exerciseType = this.value;
+                console.log('Selected exercise:', exerciseType); // Debug log
+                if (isWorkoutActive) {
+                    updateVideoFeed();
+                }
+            });
+
+            startBtn.addEventListener('click', async function() {
+                isWorkoutActive = true;
+                await fetch('/start_workout');
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                document.getElementById('summary-section').classList.add('hidden');
+                updateVideoFeed();
+                startUpdatingCount();
+            });
+
+            stopBtn.addEventListener('click', async function() {
+                isWorkoutActive = false;
+                const response = await fetch('/stop_workout');
+                const data = await response.json();
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                videoFeed.src = '';
+                updateSummary(data.summary);
+            });
+
+            function updateVideoFeed() {
+                videoFeed.src = `/video_feed/${exerciseType}`;
+            }
+
+            function updateSummary(summary) {
+                const summarySection = document.getElementById('summary-section');
+                summarySection.classList.remove('hidden');
+                
+                document.getElementById('total-reps').textContent = summary.total_reps;
+                document.getElementById('form-score').textContent = `${summary.form_percentage}%`;
+                document.getElementById('avg-rep-time').textContent = `${summary.avg_rep_time}s`;
+                
+                const feedbackDiv = summarySection.querySelector('.personal-feedback');
+                feedbackDiv.textContent = summary.feedback;
+            }
+
+            function startUpdatingCount() {
+                const updateInterval = setInterval(async function() {
+                    if (!isWorkoutActive) {
+                        clearInterval(updateInterval);
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/get_count');
+                        const data = await response.json();
+                        console.log('Count update data:', data); // Debug log
+                        
+                        if (!isWorkoutActive) {
+                            return;
+                        }
+
+                    } catch (error) {
+                        console.error('Error updating count:', error);
+                    }
+                }, 100);
+            }
+        });
+
+        // Update workout summary when stopping workout
+        document.querySelector('.button-group').addEventListener('click', function(e) {
+            console.log('Button clicked:', e.target.textContent); // Debug log
+            if (e.target.textContent.includes('Stop')) {
+                fetch('/stop_workout')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Fetched data:', data); // Debug log
+                        if (data.summary) {
+                            // Remove hidden class to show summary
+                            document.getElementById('summary-section').classList.remove('hidden');
+                            
+                            // Update summary values
+                            document.getElementById('total-reps').textContent = data.summary.total_reps;
+                            document.getElementById('form-score').textContent = data.summary.form_percentage + '%';
+                            document.getElementById('avg-rep-time').textContent = data.summary.avg_rep_time + 's';
+                            
+                            // Update feedback
+                            document.querySelector('.personal-feedback').textContent = data.summary.feedback;
+                        }
+                    })
+                    .catch(error => console.error('Error fetching summary:', error));
+            }
+        });
+    </script>
+</body>
+</html>
