@@ -656,7 +656,7 @@ def reset_count():
     """Reset the exercise counter."""
     state.reset()
     form_analyzer.__init__()
-    return jsonify({'status': 'success'})
+    return jsonify({'status': 'success'}) 
 
 def cleanup():
     """Clean up resources."""
